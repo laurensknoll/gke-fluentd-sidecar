@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-logger-app
+  labels:
+    app: file-logger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: file-logger
+  template:
+    metadata:
+      labels:
+        app: file-logger
+    spec:
+      containers:
+        - name: app
+          image: <your application with logfiles>
+          volumeMounts:
+            - name: logs
+              mountPath: /app/log
+        - name: gke-fluentd
+          image: <your configured GKE Fluentd sidecar with logfiles>
+          env:
+          - name: K8S_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: K8S_POD
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: K8S_CONTAINER
+            value: app # Use the application container name
+          volumeMounts:
+            - name: logs
+              mountPath: /app/log
+            - name: k8s-labels
+              mountPath: /k8s
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: k8s-labels
+          downwardAPI:
+            items:
+              - path: labels
+                fieldRef:
+                  fieldPath: metadata.labels
+
